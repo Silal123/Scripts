@@ -1,4 +1,6 @@
 #!/bin/bash
+# How to user:
+# bash <(curl https://raw.githubusercontent.com/Silal123/Scripts/refs/heads/main/installer/docker.sh)
 
 GREEN="\033[1;32m"
 CYAN="\033[1;36m"
