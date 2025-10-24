@@ -72,7 +72,7 @@ if ! ask "Do you want to continue with the installation?", "n"; then
     exit 0
 fi
 
-if [ "$remove_docker" = true ]; do
+if [ "$remove_docker" = true ]; then
     echo -e "${YELLOW}Removing Docker...${RESET}"
     for pkg in docker.io docker-doc docker-compose podman-docker containerd runc; do 
         sudo apt-get remove -y $pkg;
@@ -80,7 +80,7 @@ if [ "$remove_docker" = true ]; do
     echo -e "${GREEN}Removed Docker!${RESET}"
 fi
 
-if [ "$add_repository" = true ]; do
+if [ "$add_repository" = true ]; then
     echo -e "${YELLOW}Adding Docker Repository...${RESET}"
 
     sudo apt-get update
@@ -98,7 +98,7 @@ if [ "$add_repository" = true ]; do
     echo -e "${GREEN}Added Docker Repository!${RESET}"
 fi
 
-if [ "$install_docker" = true ]; do
+if [ "$install_docker" = true ]; then
     echo -e "${YELLOW}Installing Docker...${RESET}"
     sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
     echo -e "${GREEN}Installed Docker!${RESET}"
