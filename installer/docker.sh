@@ -2,6 +2,8 @@
 # How to user:
 # bash <(curl https://raw.githubusercontent.com/Silal123/Scripts/refs/heads/main/installer/docker.sh)
 
+GRAY="\033[1;30m"
+WHITE="\033[1;37m"
 GREEN="\033[1;32m"
 CYAN="\033[1;36m"
 YELLOW="\033[1;33m"
@@ -21,19 +23,6 @@ EOF
 echo -e "${RESET}"
 echo -e "${GREEN}Welcome to Docker installer!${RESET}"
 
-progress_bar() {
-    local duration=$1
-    local interval=0.1
-    local total_steps=$(echo "$duration / $interval" | bc)
-    for ((i = 0; i<=total_steps; i++)); do
-        percent=$((100*i/total_steps))
-        bar=$(printf "%-${percent}s" "#" | tr ' ' '#')
-        echo -ne "\r[${bar:0:50}] ${percent}"
-        sleep $interval
-    done
-    echo
-}
-
 ask() {
     local prompt=$1
     local default=${2:-n}
@@ -42,46 +31,91 @@ ask() {
     read -p "$prompt (y/n) [$default]: " choice
     choice=${choice:-$default}
 
+    log INPUT "$choice"
+
     [[ "$choice" =~ ^[Yy]$ ]]
 }
 
-remove_docker=false
-add_repository=false
-install_docker=false
+log() {
+    local type=$1
+    local message=$2
+    local space=$3
+    space=${space:-false}
 
-if ask "Do you want to uninstall docker first?" "n"; then
-    remove_docker=true
-else
-    remove_docker=false
+    [ "$space" = true ] && echo ""
+
+    case "$type" in
+        SUCCESS) echo -e "${GRAY}[${GREEN}SUCCESS${GRAY}] ${WHITE}$message${RESET}" ;;
+        ERROR) echo -e "${GRAY}[${RED}ERROR${GRAY}] ${WHITE}$message${RESET}" ;;
+        INFO) echo -e "${GRAY}[${YELLOW}INFO${GRAY}] ${WHITE}$message${RESET}" ;;
+        INPUT) echo -e "${GREEN}$message${RESET}" ;;
+        *) echo -e "${GRAY}[${CYAN}$type${GRAY}] ${WHITE}$message${RESET}" ;;
+    esac
+
+    [ "$space" = true ] && echo ""
+}
+
+REMOVE_DOCKER=false
+ADD_REPO=true
+INSTALL_DOCKER=true
+
+SKIP_ASK=false
+if [ $# -gt 0 ]; then
+    SKIP_ASK=true
 fi
 
-if ask "Do you want to add the Docker Repository?", "y"; then
-    add_repository=true
-else
-    add_repository=false
+for arg in "$@"; do
+    case $arg in
+        skip) ;;
+        *=*)
+            key=${arg%%=*}
+            value=${arg%%*=}
+            case "$key" in
+                remove) REMOVE_DOCKER="$value" ;;
+                repo) ADD_REPO="$value" ;;
+                install) INSTALL_DOCKER="$value" ;;
+                *) echo "Unknown option $arg" ;;
+            esac
+            ;;
+        *) echo "Unknown option $arg" ;;
+    esac
+done
+
+if [ "$SKIP_ASK" = false ]; then
+    if ask "Do you want to uninstall docker first?" "n"; then
+        REMOVE_DOCKER=true
+    else
+        REMOVE_DOCKER=false
+    fi
+
+    if ask "Do you want to add the Docker Repository?", "y"; then
+        ADD_REPO=true
+    else
+        ADD_REPO=false
+    fi
+
+    if ask "Do you want to install Docker?", "y"; then
+        INSTALL_DOCKER=true
+    else
+        INSTALL_DOCKER=false
+    fi
+
+    if ! ask "Do you want to continue with the installation?", "n"; then
+        log ERROR "Aborting installation! (Canceled)" false
+        exit 0
+    fi
 fi
 
-if ask "Do you want to install Docker?", "y"; then
-    install_docker=true
-else
-    install_docker=false
-fi
-
-if ! ask "Do you want to continue with the installation?", "n"; then
-    echo -e "${RED}Aborting installation...${RESET}"
-    exit 0
-fi
-
-if [ "$remove_docker" = true ]; then
-    echo -e "${YELLOW}Removing Docker...${RESET}"
+if [ "$REMOVE_DOCKER" = true ]; then
+    log INFO "Removing Docker..." true
     for pkg in docker.io docker-doc docker-compose podman-docker containerd runc; do 
         sudo apt-get remove -y $pkg;
     done
-    echo -e "${GREEN}Removed Docker!${RESET}"
+    log SUCCESS "Removed Docker!" true
 fi
 
-if [ "$add_repository" = true ]; then
-    echo -e "${YELLOW}Adding Docker Repository...${RESET}"
+if [ "$ADD_REPO" = true ]; then
+    log INFO "Adding Docker Repository..." true
 
     sudo apt-get update
     sudo apt-get install -y ca-certificates curl
@@ -95,11 +129,13 @@ if [ "$add_repository" = true ]; then
     sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
     sudo apt-get update
 
-    echo -e "${GREEN}Added Docker Repository!${RESET}"
+    log SUCCESS "Added Docker Repository!" true
 fi
 
-if [ "$install_docker" = true ]; then
-    echo -e "${YELLOW}Installing Docker...${RESET}"
+if [ "$INSTALL_DOCKER" = true ]; then
+    log INFO "Installing Docker..." true
     sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-    echo -e "${GREEN}Installed Docker!${RESET}"
+    log SUCCESS "Installed Docker!" true
 fi
+
+log SUCCESS "Docker installation script was success!" true
